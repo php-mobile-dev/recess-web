@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Models\BankDetail;
 use App\Models\BankTransaction;
 use App\Http\Helpers\StripeHelper;
+use App\Http\Helpers\SendSMS;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -232,12 +233,17 @@ class V1ApiController extends Controller
 				]);
 				$verification->save();
 			}
-			// SendSMS::sendMessage($verification->code." is your One Time Password (OTP) for your Recess Account.", $verification->mobile_no);
+			try{
+				SendSMS::sendMessage($verification->code." is your One Time Password (OTP) for your Recess Account.", $verification->mobile_no);
+			}catch(\Exception $e){
+
+			}
+			
 
 			return [
 				'status_flag' => true,
 				'message' => "One time password is sent to you no",
-				'otp' => (int) $verification->code,
+				// 'otp' => (int) $verification->code,
 			];
 		} catch (\Exception $e) {
 			$response['message'] = $e->getMessage();
@@ -451,7 +457,7 @@ class V1ApiController extends Controller
 		$events = $query->get();
 		if ($request->type != 'upcoming') {
 			foreach ($events as $event_key => $event) {
-				if ($event->activity_type_id == 2) {
+				if (($event->activity_type_id == 2) && ($request->user_id != $event->user_id)) {
 					if (DB::table('event_invitations')->where('event_id', $event->id)->where('user_id', $request->user_id)->count() == 0)
 						$events->forget($event_key);
 				}
@@ -855,7 +861,9 @@ class V1ApiController extends Controller
 			$exists = User::where($type, $contact)->count();
 			if ($exists == 0) {
 				if ($type == 'mobile_no') {
-					//SendSMS::sendMessage($message, $contact);
+					try{
+						SendSMS::sendMessage($message, $contact);
+					}catch(Exception $e){}
 				} else {
 					Mail::send('invite', ['app_link' => $app_link, 'username' => $request->username], function ($msg) use ($contact) {
 						$msg->to($contact, 'User')->subject('Invite to join your friend on Recess');

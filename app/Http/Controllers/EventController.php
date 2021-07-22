@@ -31,6 +31,16 @@ class EventController extends BaseController
         return ['data' => $data];
     }
 
+    public function edit($id)
+    {
+        $obj = Event::find($id);
+        $heading = strtolower(preg_replace('/(?|([A-Z])([A-Z][a-z])|([a-z])([A-Z]))/', '${1} ${2}', 'event'));
+        $fields = $obj->addList;
+        $obj->days = implode(',', @json_decode($obj->days, true));
+        return view('admin.common.edit', compact('fields','obj','heading'));
+    }
+
+
     public function update(Request $request, $id){
         $request['starts_on'] = Carbon::parse($request['starts_on']);
         $request['ends_on'] = Carbon::parse($request['ends_on']);
@@ -46,8 +56,8 @@ class EventController extends BaseController
             $obj->ends_on = $request->ends_on;
             $obj->status = $request->status;
             $obj->fees = $request->fees;
-            $obj->frequency = $request->frequency;
-            $obj->days = empty($request->days) ? '[]' : @json_encode(explode($request->days));
+            $obj->frequency = ucfirst($request->frequency);
+            $obj->days = empty($request->days) ? '[]' : @json_encode(explode(',', $request->days));
             $obj->save();
             Session::flash('message', 'Record updated successfully');
         }
